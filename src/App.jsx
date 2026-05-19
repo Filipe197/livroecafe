@@ -570,6 +570,7 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
 
   const handleSavePrice = async () => {
     setPrice(draftPrice);
+    localStorage.setItem("lc_price", draftPrice.toString());
     showToast("✓ Preço atualizado!", "success");
   };
 
@@ -585,7 +586,10 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
             <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#555" }}>livroecafe.com.br · Supabase conectado ✓</div>
           </div>
           <div style={{ flex: 1 }} />
-          <button className="btn-ghost" onClick={onClose} style={{ padding: "8px 16px", fontSize: 13 }}>✕ Sair</button>
+          <button onClick={onClose} style={{ background: "rgba(200,135,58,.12)", color: "#c8873a", border: "1px solid rgba(200,135,58,.25)", borderRadius: 6, padding: "8px 16px", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, marginRight: 8 }}>
+            🌐 Ver Site
+          </button>
+          <button className="btn-ghost" onClick={() => { onClose(); sessionStorage.removeItem("lc_admin"); }} style={{ padding: "8px 16px", fontSize: 13 }}>✕ Sair</button>
         </div>
 
         {/* Tabs */}
@@ -930,7 +934,7 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
 export default function App() {
   const [books, setBooks]         = useState([]);
   const [booksLoading, setBooksLoading] = useState(true);
-  const [price, setPrice]         = useState(29.90);
+  const [price, setPrice]         = useState(() => parseFloat(localStorage.getItem("lc_price") || "29.90"));
   const [genre, setGenre]         = useState("Todos");
   const [search, setSearch]       = useState("");
   const [heroIdx, setHeroIdx]     = useState(0);
@@ -938,7 +942,7 @@ export default function App() {
   const [subscribed, setSub]      = useState(false);
   const [selectedBook, setSelBook]= useState(null);
   const [showLogin, setShowLogin] = useState(false);
-  const [adminAuth, setAdminAuth] = useState(false);
+  const [adminAuth, setAdminAuth] = useState(() => sessionStorage.getItem("lc_admin") === "true");
   const [showAdmin, setShowAdmin] = useState(false);
   const [toast, setToast]         = useState({ msg: "", type: "info" });
   const [subEmail, setSubEmail]   = useState("");
@@ -1048,13 +1052,13 @@ export default function App() {
 
         {showLogin && (
           <AdminLogin
-            onLogin={() => { setAdminAuth(true); setShowLogin(false); setShowAdmin(true); showToast("✓ Bem-vindo, administrador!", "success"); }}
+            onLogin={() => { setAdminAuth(true); sessionStorage.setItem("lc_admin","true"); setShowLogin(false); setShowAdmin(true); showToast("✓ Bem-vindo, administrador!", "success"); }}
             onClose={() => setShowLogin(false)}
           />
         )}
         {showAdmin && adminAuth && (
           <AdminPanel
-            onClose={() => { setShowAdmin(false); setAdminAuth(false); showToast("Sessão admin encerrada."); }}
+            onClose={() => { setShowAdmin(false); setAdminAuth(false); sessionStorage.removeItem("lc_admin"); showToast("Sessão admin encerrada."); }}
             showToast={showToast}
             price={price}
             setPrice={setPrice}
@@ -1219,6 +1223,25 @@ export default function App() {
             </>
           )}
         </div>
+
+        {/* ── Floating Admin Button ── */}
+        {adminAuth && !showAdmin && (
+          <button
+            onClick={() => setShowAdmin(true)}
+            style={{
+              position: "fixed", bottom: 28, right: 28, zIndex: 300,
+              background: "linear-gradient(135deg,#c8873a,#e8a84a)",
+              border: "none", borderRadius: "50%", width: 52, height: 52,
+              cursor: "pointer", fontSize: 22, boxShadow: "0 4px 20px rgba(200,135,58,.5)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "transform .2s, box-shadow .2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
+            title="Abrir painel admin">
+            ⚙
+          </button>
+        )}
 
         {/* ── Search Overlay ── */}
         {showSearch && (
