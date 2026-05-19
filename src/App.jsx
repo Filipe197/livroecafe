@@ -325,6 +325,11 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
   const [genres, setGenres]     = useState(DEFAULT_GENRES);
   const [newGenre, setNewGenre] = useState("");
   const [genreSaving, setGenreSaving] = useState(false);
+  const [editingBook, setEditingBook] = useState(null); // book being edited
+  const [editForm, setEditForm]       = useState(null);
+  const [editSaving, setEditSaving]   = useState(false);
+  const [renamingGenre, setRenamingGenre] = useState(null); // genre name being renamed
+  const [renameValue, setRenameValue]     = useState("");
 
   const fetchBooks = useCallback(async () => {
     setLoading(true);
@@ -379,6 +384,57 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
     setDeleteId(null);
   };
 
+  const startEdit = (book) => {
+    setEditingBook(book);
+    setEditForm({
+      title: book.title,
+      author: book.author,
+      genre: book.genre,
+      cover_url: book.cover_url || "",
+      description: book.description || "",
+      featured: book.featured || false,
+      is_new: book.is_new || false,
+      formats: book.formats || { ...EMPTY_FORMATS },
+    });
+    setTab("edit");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editForm.title.trim() || !editForm.author.trim()) { showToast("Preencha título e autor.", "error"); return; }
+    setEditSaving(true);
+    const { error } = await supabase.from("books").update({
+      title: editForm.title.trim(),
+      author: editForm.author.trim(),
+      genre: editForm.genre,
+      description: editForm.description.trim(),
+      cover_url: editForm.cover_url.trim() || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=500&q=80",
+      featured: editForm.featured,
+      is_new: editForm.is_new,
+      formats: editForm.formats,
+    }).eq("id", editingBook.id);
+    if (error) { showToast("Erro ao salvar: " + error.message, "error"); }
+    else {
+      showToast("✓ Livro atualizado!", "success");
+      setEditingBook(null); setEditForm(null);
+      fetchBooks(); setTab("library");
+    }
+    setEditSaving(false);
+  };
+
+  const handleRenameGenre = (oldName) => {
+    const newName = renameValue.trim();
+    if (!newName) return;
+    if (genres.includes(newName) && newName !== oldName) { showToast("Já existe um gênero com esse nome.", "error"); return; }
+    setGenres(prev => prev.map(g => g === oldName ? newName : g).sort());
+    // Update all books with this genre
+    books.filter(b => b.genre === oldName).forEach(async (b) => {
+      await supabase.from("books").update({ genre: newName }).eq("id", b.id);
+    });
+    setRenamingGenre(null); setRenameValue("");
+    showToast(`✓ Gênero renomeado para "${newName}"`, "success");
+    fetchBooks();
+  };
+
   const handleAddGenre = () => {
     const g = newGenre.trim();
     if (!g) return;
@@ -418,6 +474,7 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
           {[
             ["library", `📚 Biblioteca`, books.length],
             ["add", "＋ Adicionar Livro", null],
+            ...(editingBook ? [["edit", `✏ Editando`, null]] : []),
             ["genres", `🏷 Gêneros`, genres.length],
             ["subscribers", `👥 Assinantes`, subscribers.length],
             ["pricing", "💳 Assinatura", null],
@@ -460,13 +517,18 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
                               {fmtCount === 0 && <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#333" }}>Sem formatos</span>}
                             </div>
                           </div>
-                          {deleteId === b.id
-                            ? <div style={{ display: "flex", gap: 6 }}>
-                                <button className="btn-primary" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => handleDelete(b.id)}>Confirmar</button>
-                                <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => setDeleteId(null)}>Cancelar</button>
-                              </div>
-                            : <button className="btn-danger" onClick={() => setDeleteId(b.id)}>🗑 Remover</button>
-                          }
+                          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                            {deleteId === b.id
+                              ? <>
+                                  <button className="btn-primary" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => handleDelete(b.id)}>Confirmar</button>
+                                  <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => setDeleteId(null)}>Cancelar</button>
+                                </>
+                              : <>
+                                  <button onClick={() => startEdit(b)} style={{ background: "rgba(200,135,58,.12)", color: "#c8873a", border: "1px solid rgba(200,135,58,.25)", borderRadius: 5, padding: "7px 14px", cursor: "pointer", fontSize: 12, fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>✏ Editar</button>
+                                  <button className="btn-danger" onClick={() => setDeleteId(b.id)}>🗑 Remover</button>
+                                </>
+                            }
+                          </div>
                         </div>
                       );
                     })
@@ -511,6 +573,50 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
             </div>
           )}
 
+          {/* ── EDIT ── */}
+          {tab === "edit" && editForm && (
+            <div style={{ maxWidth: 680 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: "#fff" }}>Editar Livro</div>
+                <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#555" }}>— {editingBook.title}</span>
+                <button onClick={() => { setEditingBook(null); setEditForm(null); setTab("library"); }} style={{ marginLeft: "auto", background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif" }}>✕ Cancelar</button>
+              </div>
+              <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+                <div style={{ gridColumn: "1/-1" }}>
+                  <label style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#666", display: "block", marginBottom: 6, fontWeight: 500 }}>Título *</label>
+                  <input className="input" value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
+                </div>
+                {[["author","Autor *"],["cover_url","URL da Capa"]].map(([k,l]) => (
+                  <div key={k}>
+                    <label style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#666", display: "block", marginBottom: 6, fontWeight: 500 }}>{l}</label>
+                    <input className="input" value={editForm[k]} onChange={e => setEditForm({ ...editForm, [k]: e.target.value })} />
+                  </div>
+                ))}
+                <div>
+                  <label style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#666", display: "block", marginBottom: 6, fontWeight: 500 }}>Gênero</label>
+                  <select className="input" value={editForm.genre} onChange={e => setEditForm({ ...editForm, genre: e.target.value })}>
+                    {genres.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 22 }}>
+                  <label className="check-row"><input type="checkbox" checked={editForm.featured} onChange={e => setEditForm({ ...editForm, featured: e.target.checked })} /> ⭐ Destaque</label>
+                  <label className="check-row"><input type="checkbox" checked={editForm.is_new} onChange={e => setEditForm({ ...editForm, is_new: e.target.checked })} /> 🆕 Novo</label>
+                </div>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#666", display: "block", marginBottom: 6, fontWeight: 500 }}>Descrição</label>
+                <textarea className="input" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} rows={3} style={{ resize: "vertical" }} />
+              </div>
+              <FormatInputs formats={editForm.formats} setFormats={f => setEditForm({ ...editForm, formats: f })} />
+              <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+                <button className="btn-primary" onClick={handleSaveEdit} disabled={editSaving} style={{ padding: "13px 28px", fontSize: 15 }}>
+                  {editSaving ? <><div className="spinner" />Salvando...</> : "💾 Salvar Alterações"}
+                </button>
+                <button className="btn-ghost" onClick={() => { setEditingBook(null); setEditForm(null); setTab("library"); }} style={{ padding: "13px 20px" }}>Cancelar</button>
+              </div>
+            </div>
+          )}
+
           {/* ── GENRES ── */}
           {tab === "genres" && (
             <div style={{ maxWidth: 560 }}>
@@ -520,20 +626,29 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
                 <input className="input" value={newGenre} onChange={e => setNewGenre(e.target.value)} placeholder="Ex: Autoajuda, Aventura, HQ..." onKeyDown={e => e.key === "Enter" && handleAddGenre()} style={{ flex: 1 }} />
                 <button className="btn-primary" onClick={handleAddGenre} disabled={genreSaving} style={{ padding: "11px 20px", flexShrink: 0 }}>＋ Adicionar</button>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {genres.map(g => (
-                  <div key={g} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 20, padding: "6px 12px 6px 14px" }}>
-                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#ccc" }}>{g}</span>
-                    {!DEFAULT_GENRES.includes(g) && (
-                      <button onClick={() => handleRemoveGenre(g)} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0, marginLeft: 2 }} title="Remover">✕</button>
-                    )}
-                    {DEFAULT_GENRES.includes(g) && (
-                      <span style={{ fontSize: 10, color: "#333", marginLeft: 2 }}>●</span>
-                    )}
+                  <div key={g} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 8, padding: "10px 14px" }}>
+                    {renamingGenre === g
+                      ? <div style={{ display: "flex", flex: 1, gap: 8, alignItems: "center" }}>
+                          <input className="input" value={renameValue} onChange={e => setRenameValue(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleRenameGenre(g); if (e.key === "Escape") { setRenamingGenre(null); setRenameValue(""); } }} autoFocus style={{ flex: 1, padding: "7px 12px", fontSize: 13 }} />
+                          <button className="btn-primary" style={{ padding: "7px 14px", fontSize: 12 }} onClick={() => handleRenameGenre(g)}>Salvar</button>
+                          <button className="btn-ghost" style={{ padding: "7px 12px", fontSize: 12 }} onClick={() => { setRenamingGenre(null); setRenameValue(""); }}>✕</button>
+                        </div>
+                      : <>
+                          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: "#ccc", flex: 1 }}>{g}</span>
+                          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#444" }}>{books.filter(b => b.genre === g).length} livro{books.filter(b => b.genre === g).length !== 1 ? "s" : ""}</span>
+                          <button onClick={() => { setRenamingGenre(g); setRenameValue(g); }} style={{ background: "rgba(200,135,58,.1)", color: "#c8873a", border: "1px solid rgba(200,135,58,.2)", borderRadius: 5, padding: "5px 10px", cursor: "pointer", fontSize: 11, fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>✏ Renomear</button>
+                          {!DEFAULT_GENRES.includes(g)
+                            ? <button onClick={() => handleRemoveGenre(g)} style={{ background: "rgba(200,40,40,.1)", color: "#ff6060", border: "1px solid rgba(200,40,40,.2)", borderRadius: 5, padding: "5px 10px", cursor: "pointer", fontSize: 11, fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>🗑 Remover</button>
+                            : <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#333", padding: "5px 8px" }}>padrão</span>
+                          }
+                        </>
+                    }
                   </div>
                 ))}
               </div>
-              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#333", marginTop: 16 }}>● Gêneros padrão · Os demais podem ser removidos</div>
+              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#333", marginTop: 12 }}>Gêneros "padrão" podem ser renomeados mas não removidos.</div>
             </div>
           )}
 
