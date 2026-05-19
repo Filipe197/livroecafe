@@ -7,8 +7,8 @@ const SUPABASE_KEY = "sb_publishable_cPsjiFM_Q61ETYYdJuGVfQ_mBNFl4Tk";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ─── Admin credentials (em produção, use Supabase Auth) ─────────────────── */
-const ADMIN_USER = "lipesantos";
-const ADMIN_PASS = "Ee@86121625";
+const ADMIN_USER = import.meta.env.VITE_ADMIN_USER || "admin";
+const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASS || "livroecafe2026";
 
 /* ─── Constants ───────────────────────────────────────────────────────────── */
 const FORMAT_META = {
@@ -177,8 +177,7 @@ function AdminLogin({ onLogin, onClose }) {
           </button>
           <button className="btn-ghost" onClick={onClose} style={{ justifyContent: "center", padding: "10px" }}>Cancelar</button>
         </div>
-        <div style={{ textAlign: "center", marginTop: 20, fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#2a2a2a" }}>
-        </div>
+
       </div>
     </div>
   );
@@ -470,18 +469,21 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,.06)", background: "#141210", overflowX: "auto" }}>
+        <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,.06)", background: "#141210", overflowX: "auto", gap: 0 }}>
           {[
-            ["library", `📚 Biblioteca`, books.length],
-            ["add", "＋ Adicionar Livro", null],
-            ...(editingBook ? [["edit", `✏ Editando`, null]] : []),
-            ["genres", `🏷 Gêneros`, genres.length],
-            ["subscribers", `👥 Assinantes`, subscribers.length],
-            ["pricing", "💳 Assinatura", null],
-          ].map(([id, label, count]) => (
-            <button key={id} className={`admin-tab${tab === id ? " active" : ""}`} onClick={() => { setTab(id); if (id === "subscribers") fetchSubs(); }}>
-              {label}
-              {count !== null && <span style={{ background: "rgba(200,135,58,.2)", color: "#c8873a", fontSize: 10, padding: "1px 7px", borderRadius: 10, marginLeft: 7, fontWeight: 700 }}>{count}</span>}
+            ["library", "📚", "Biblioteca", books.length],
+            ["add", "＋", "Adicionar", null],
+            ...(editingBook ? [["edit", "✏", "Editando", null]] : []),
+            ["genres", "🏷", "Gêneros", genres.length],
+            ["subscribers", "👥", "Assinantes", subscribers.length],
+            ["pricing", "💳", "Assinatura", null],
+          ].map(([id, icon, label, count]) => (
+            <button key={id} className={`admin-tab${tab === id ? " active" : ""}`}
+              onClick={() => { setTab(id); if (id === "subscribers") fetchSubs(); }}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "10px 16px", minWidth: 64 }}>
+              <span style={{ fontSize: 16 }}>{icon}</span>
+              <span style={{ fontSize: 11, whiteSpace: "nowrap" }}>{label}</span>
+              {count !== null && <span style={{ background: "rgba(200,135,58,.2)", color: "#c8873a", fontSize: 9, padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>{count}</span>}
             </button>
           ))}
         </div>
@@ -492,6 +494,23 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
           {/* ── LIBRARY ── */}
           {tab === "library" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+                <div style={{ flex: 1, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 7, padding: "9px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ color: "#444", fontSize: 14 }}>🔍</span>
+                  <input
+                    placeholder="Buscar livro ou autor..."
+                    onChange={e => {
+                      const q = e.target.value.toLowerCase();
+                      if (!q) { fetchBooks(); return; }
+                      setBooks(prev => prev.filter(b =>
+                        b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q)
+                      ));
+                    }}
+                    style={{ background: "none", border: "none", outline: "none", color: "#fff", fontSize: 13, fontFamily: "'DM Sans',sans-serif", width: "100%" }}
+                  />
+                </div>
+                <button className="btn-primary" onClick={fetchBooks} style={{ padding: "9px 14px", fontSize: 13 }} title="Recarregar">↺</button>
+              </div>
               {loading
                 ? Array(4).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 72, borderRadius: 8 }} />)
                 : books.length === 0
