@@ -178,7 +178,6 @@ function AdminLogin({ onLogin, onClose }) {
           <button className="btn-ghost" onClick={onClose} style={{ justifyContent: "center", padding: "10px" }}>Cancelar</button>
         </div>
         <div style={{ textAlign: "center", marginTop: 20, fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#2a2a2a" }}>
-          demo · usuário: admin · senha: livroecafe2026
         </div>
       </div>
     </div>
