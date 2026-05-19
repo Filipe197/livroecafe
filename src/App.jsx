@@ -589,21 +589,36 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,.06)", background: "#141210", overflowX: "auto", gap: 0, scrollbarWidth: "none" }}>
+        <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,.06)", background: "#141210", overflowX: "auto", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
           {[
-            ["library", "📚", "Biblioteca", books.length],
-            ["add", "＋", "Adicionar", null],
-            ...(editingBook ? [["edit", "✏", "Editando", null]] : []),
-            ["genres", "🏷", "Gêneros", genres.length],
-            ["subscribers", "👥", "Assinantes", subscribers.length],
-            ["pricing", "💳", "Assinatura", null],
-          ].map(([id, icon, label, count]) => (
-            <button key={id} className={`admin-tab${tab === id ? " active" : ""}`}
+            { id: "dashboard",   icon: "📊", label: "Dashboard",  count: null },
+            { id: "library",     icon: "📚", label: "Biblioteca", count: books.length },
+            { id: "add",         icon: "＋", label: "Adicionar",  count: null },
+            ...(editingBook ? [{ id: "edit", icon: "✏", label: "Editando", count: null }] : []),
+            { id: "genres",      icon: "🏷", label: "Gêneros",    count: genres.length },
+            { id: "subscribers", icon: "👥", label: "Assinantes", count: subscribers.length },
+            { id: "pricing",     icon: "💳", label: "Assinatura", count: null },
+          ].map(({ id, icon, label, count }) => (
+            <button key={id}
               onClick={() => { setTab(id); if (id === "subscribers" || id === "dashboard") fetchSubs(); }}
-              style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 6, padding: "12px 18px", whiteSpace: "nowrap", flexShrink: 0 }}>
-              <span style={{ fontSize: 15 }}>{icon}</span>
-              <span style={{ fontSize: 13 }}>{label}</span>
-              {count !== null && <span style={{ background: "rgba(200,135,58,.2)", color: "#c8873a", fontSize: 10, padding: "1px 6px", borderRadius: 8, fontWeight: 700 }}>{count}</span>}
+              style={{
+                display: "flex", alignItems: "center", gap: 7,
+                padding: "14px 20px", flexShrink: 0,
+                background: "none", border: "none",
+                borderBottom: tab === id ? "2px solid #c8873a" : "2px solid transparent",
+                color: tab === id ? "#fff" : "#666",
+                fontFamily: "'DM Sans',sans-serif",
+                fontSize: 14,
+                fontWeight: tab === id ? 600 : 400,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "color .2s",
+              }}>
+              <span style={{ fontSize: 16 }}>{icon}</span>
+              <span>{label}</span>
+              {count !== null && (
+                <span style={{ background: "rgba(200,135,58,.18)", color: "#c8873a", fontSize: 11, padding: "1px 7px", borderRadius: 10, fontWeight: 700, marginLeft: 2 }}>{count}</span>
+              )}
             </button>
           ))}
         </div>
