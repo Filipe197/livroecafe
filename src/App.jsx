@@ -588,10 +588,10 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
             <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#555" }}>livroecafe.com.br · Supabase conectado ✓</div>
           </div>
           <div style={{ flex: 1 }} />
-          <button onClick={onClose} style={{ background: "rgba(200,135,58,.12)", color: "#c8873a", border: "1px solid rgba(200,135,58,.25)", borderRadius: 6, padding: "8px 16px", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, marginRight: 8 }}>
+          <button onClick={() => onClose(false)} style={{ background: "rgba(200,135,58,.12)", color: "#c8873a", border: "1px solid rgba(200,135,58,.25)", borderRadius: 6, padding: "8px 16px", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, marginRight: 8 }}>
             🌐 Ver Site
           </button>
-          <button className="btn-ghost" onClick={() => { onClose(); sessionStorage.removeItem("lc_admin"); }} style={{ padding: "8px 16px", fontSize: 13 }}>✕ Sair</button>
+          <button className="btn-ghost" onClick={() => onClose(true)} style={{ padding: "8px 16px", fontSize: 13 }}>✕ Sair</button>
         </div>
 
         {/* Tabs */}
@@ -1066,7 +1066,7 @@ export default function App() {
         )}
         {showAdmin && adminAuth && (
           <AdminPanel
-            onClose={() => { setShowAdmin(false); setAdminAuth(false); sessionStorage.removeItem("lc_admin"); showToast("Sessão admin encerrada."); }}
+            onClose={(logout) => { setShowAdmin(false); if (logout) { setAdminAuth(false); sessionStorage.removeItem("lc_admin"); showToast("Sessão admin encerrada."); } }}
             showToast={showToast}
             price={price}
             setPrice={setPrice}
