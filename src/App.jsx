@@ -116,6 +116,21 @@ select.input{appearance:none;cursor:pointer}
 .share-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#ccc;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s}
 .share-btn:hover{background:rgba(200,135,58,.15);border-color:#c8873a;color:#e8a858}
 
+/* ── Search overlay ── */
+.search-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);backdrop-filter:blur(20px);z-index:300;display:flex;flex-direction:column;padding:80px 40px 40px;animation:fadeUp .2s ease}
+.search-result-card{display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);cursor:pointer;transition:all .2s}
+.search-result-card:hover{background:rgba(200,135,58,.08);border-color:rgba(200,135,58,.25)}
+
+/* ── Stars ── */
+.star{font-size:20px;cursor:pointer;transition:transform .15s;color:#444}
+.star.filled{color:#f5a623}
+.star:hover{transform:scale(1.2)}
+
+/* ── Dashboard cards ── */
+.dash-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:20px 24px}
+.dash-stat{font-family:'Playfair Display',serif;font-size:38px;font-weight:900;color:#fff;line-height:1}
+.dash-label{font-family:'DM Sans',sans-serif;font-size:12px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+
 .skeleton{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:6px}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 `;
@@ -183,6 +198,108 @@ function AdminLogin({ onLogin, onClose }) {
   );
 }
 
+/* ─── Star Rating ─────────────────────────────────────────────────────────── */
+function StarRating({ value, onChange, readonly = false }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {[1,2,3,4,5].map(i => (
+        <span key={i}
+          className={`star${i <= (hover || value) ? " filled" : ""}`}
+          onClick={() => !readonly && onChange && onChange(i)}
+          onMouseEnter={() => !readonly && setHover(i)}
+          onMouseLeave={() => !readonly && setHover(0)}
+          style={{ fontSize: readonly ? 14 : 22, cursor: readonly ? "default" : "pointer", color: i <= (hover || value) ? "#f5a623" : "#333" }}>
+          ★
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Reviews Section ──────────────────────────────────────────────────────── */
+function ReviewsSection({ book }) {
+  const [reviews, setReviews]   = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [rating, setRating]     = useState(0);
+  const [name, setName]         = useState("");
+  const [comment, setComment]   = useState("");
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+
+  useEffect(() => {
+    supabase.from("reviews").select("*").eq("book_id", book.id).order("created_at", { ascending: false })
+      .then(({ data }) => { setReviews(data || []); setLoading(false); });
+  }, [book.id]);
+
+  const avgRating = reviews.length ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : null;
+
+  const handleSubmit = async () => {
+    if (!rating) return;
+    setSaving(true);
+    const { error } = await supabase.from("reviews").insert([{
+      book_id: book.id, name: name.trim() || "Anônimo",
+      rating, comment: comment.trim()
+    }]);
+    if (!error) {
+      const { data } = await supabase.from("reviews").select("*").eq("book_id", book.id).order("created_at", { ascending: false });
+      setReviews(data || []);
+      setRating(0); setName(""); setComment(""); setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ marginTop: 20, borderTop: "1px solid rgba(255,255,255,.07)", paddingTop: 18 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Avaliações</div>
+        {avgRating && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: "#f5a623", fontSize: 16 }}>★</span>
+            <span style={{ fontFamily: "'DM Sans',sans-serif", color: "#fff", fontWeight: 700, fontSize: 15 }}>{avgRating}</span>
+            <span style={{ fontFamily: "'DM Sans',sans-serif", color: "#555", fontSize: 12 }}>({reviews.length})</span>
+          </div>
+        )}
+      </div>
+
+      {/* Existing reviews */}
+      {loading ? <div style={{ color: "#444", fontFamily: "'DM Sans',sans-serif", fontSize: 13 }}>Carregando...</div>
+        : reviews.length === 0 ? <div style={{ color: "#444", fontFamily: "'DM Sans',sans-serif", fontSize: 13, marginBottom: 16 }}>Seja o primeiro a avaliar!</div>
+        : <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16, maxHeight: 180, overflowY: "auto" }}>
+            {reviews.map(r => (
+              <div key={r.id} style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 8, padding: "10px 14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontWeight: 600, color: "#ccc", fontSize: 13 }}>{r.name}</span>
+                  <StarRating value={r.rating} readonly />
+                  <span style={{ fontFamily: "'DM Sans',sans-serif", color: "#444", fontSize: 11, marginLeft: "auto" }}>{new Date(r.created_at).toLocaleDateString("pt-BR")}</span>
+                </div>
+                {r.comment && <p style={{ fontFamily: "'DM Sans',sans-serif", color: "#999", fontSize: 13, lineHeight: 1.6, margin: 0 }}>{r.comment}</p>}
+              </div>
+            ))}
+          </div>
+      }
+
+      {/* New review form */}
+      {saved
+        ? <div style={{ background: "rgba(40,180,100,.1)", border: "1px solid rgba(40,180,100,.3)", color: "#4dcc88", borderRadius: 8, padding: "10px 14px", fontFamily: "'DM Sans',sans-serif", fontSize: 13 }}>✓ Avaliação enviada!</div>
+        : <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 8, padding: 14 }}>
+            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#666", marginBottom: 8 }}>Sua avaliação:</div>
+            <StarRating value={rating} onChange={setRating} />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Seu nome (opcional)"
+              style={{ width: "100%", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 6, padding: "8px 12px", color: "#fff", fontSize: 13, fontFamily: "'DM Sans',sans-serif", outline: "none", marginTop: 10, boxSizing: "border-box" }} />
+            <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Comentário (opcional)" rows={2}
+              style={{ width: "100%", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 6, padding: "8px 12px", color: "#fff", fontSize: 13, fontFamily: "'DM Sans',sans-serif", outline: "none", marginTop: 8, resize: "none", boxSizing: "border-box" }} />
+            <button onClick={handleSubmit} disabled={!rating || saving}
+              style={{ marginTop: 10, background: rating ? "#c8873a" : "#2a2a2a", color: rating ? "#fff" : "#555", border: "none", borderRadius: 6, padding: "9px 20px", cursor: rating ? "pointer" : "not-allowed", fontSize: 13, fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>
+              {saving ? "Enviando..." : "Enviar Avaliação"}
+            </button>
+          </div>
+      }
+    </div>
+  );
+}
+
 /* ─── Share helper ────────────────────────────────────────────────────────── */
 async function shareBook(book, format, link) {
   const title = `${book.title} — ${book.author}`;
@@ -241,7 +358,10 @@ function BookModal({ book, onClose }) {
           ) : (
             <div style={{ fontFamily: "'DM Sans', sans-serif", color: "#444", fontSize: 13, marginBottom: 20 }}>Nenhum formato disponível ainda.</div>
           )}
-          <button className="btn-ghost" onClick={onClose} style={{ padding: "10px 22px" }}>Fechar</button>
+          <ReviewsSection book={book} />
+          <div style={{ marginTop: 16 }}>
+            <button className="btn-ghost" onClick={onClose} style={{ padding: "10px 22px" }}>Fechar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -479,7 +599,7 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
             ["pricing", "💳", "Assinatura", null],
           ].map(([id, icon, label, count]) => (
             <button key={id} className={`admin-tab${tab === id ? " active" : ""}`}
-              onClick={() => { setTab(id); if (id === "subscribers") fetchSubs(); }}
+              onClick={() => { setTab(id); if (id === "subscribers" || id === "dashboard") fetchSubs(); }}
               style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 6, padding: "12px 18px", whiteSpace: "nowrap", flexShrink: 0 }}>
               <span style={{ fontSize: 15 }}>{icon}</span>
               <span style={{ fontSize: 13 }}>{label}</span>
@@ -490,6 +610,71 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
 
         {/* Body */}
         <div style={{ flex: 1, overflow: "auto", padding: 24 }}>
+
+          {/* ── DASHBOARD ── */}
+          {tab === "dashboard" && (() => {
+            const topBooks = [...books].sort((a,b) => (b.views||0)-(a.views||0)).slice(0,5);
+            const thisMonth = subscribers.filter(s => new Date(s.created_at).getMonth() === new Date().getMonth()).length;
+            const totalFormats = books.reduce((acc,b) => acc + Object.values(b.formats||{}).filter(Boolean).length, 0);
+            return (
+              <div>
+                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, color: "#fff", marginBottom: 20 }}>Dashboard</div>
+
+                {/* Stats row */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 14, marginBottom: 28 }}>
+                  {[
+                    ["📚", books.length, "Livros"],
+                    ["👥", subscribers.length, "Assinantes"],
+                    ["🆕", thisMonth, "Novos este mês"],
+                    ["📥", totalFormats, "Formatos"],
+                  ].map(([icon, val, label]) => (
+                    <div key={label} className="dash-card">
+                      <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
+                      <div className="dash-stat">{val}</div>
+                      <div className="dash-label">{label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Top books */}
+                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: "#fff", marginBottom: 12 }}>📈 Livros mais acessados</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 28 }}>
+                  {topBooks.length === 0
+                    ? <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#444", fontSize: 13 }}>Nenhum acesso registrado ainda.</div>
+                    : topBooks.map((b, i) => (
+                        <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.05)", borderRadius: 8 }}>
+                          <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: i === 0 ? "#f5a623" : "#444", fontWeight: 900, width: 24, textAlign: "center" }}>{i+1}</span>
+                          <img src={b.cover_url} alt={b.title} style={{ width: 32, height: 44, objectFit: "cover", borderRadius: 4, flexShrink: 0 }} onError={e => { e.target.src = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400&q=80"; }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontFamily: "'DM Sans',sans-serif", fontWeight: 600, color: "#fff", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.title}</div>
+                            <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#555", fontSize: 12 }}>{b.author}</div>
+                          </div>
+                          <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#c8873a", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{b.views || 0} views</div>
+                        </div>
+                      ))
+                  }
+                </div>
+
+                {/* Recent subscribers */}
+                <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: "#fff", marginBottom: 12 }}>🆕 Assinantes recentes</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {subscribers.slice(0,5).length === 0
+                    ? <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#444", fontSize: 13 }}>Nenhum assinante ainda.</div>
+                    : subscribers.slice(0,5).map(s => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", background: "rgba(255,255,255,.02)", borderRadius: 8, border: "1px solid rgba(255,255,255,.04)" }}>
+                          <span style={{ fontSize: 18 }}>👤</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#ccc", fontSize: 13, fontWeight: 500 }}>{s.name || "—"}</div>
+                            <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#555", fontSize: 12 }}>{s.email}</div>
+                          </div>
+                          <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#444", fontSize: 11 }}>{new Date(s.created_at).toLocaleDateString("pt-BR")}</div>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── LIBRARY ── */}
           {tab === "library" && (
@@ -745,8 +930,26 @@ export default function App() {
   const [subName, setSubName]     = useState("");
   const [showSubForm, setShowSubForm] = useState(false);
   const [subSaving, setSubSaving] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
 
   const showToast = (msg, type = "info") => { setToast({ msg, type }); setTimeout(() => setToast({ msg: "", type: "info" }), 3000); };
+
+  const handleSearch = async (q) => {
+    setSearchQuery(q);
+    if (!q.trim()) { setSearchResults([]); return; }
+    const { data } = await supabase.from("books").select("*")
+      .or(`title.ilike.%${q}%,author.ilike.%${q}%,genre.ilike.%${q}%`);
+    setSearchResults(data || []);
+  };
+
+  const openBook = async (book) => {
+    // increment view counter
+    await supabase.from("books").update({ views: (book.views || 0) + 1 }).eq("id", book.id);
+    setSelBook(book);
+    if (showSearch) setShowSearch(false);
+  };
 
   /* fetch books from Supabase */
   const fetchBooks = useCallback(async () => {
@@ -772,6 +975,15 @@ export default function App() {
     const fn = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  useEffect(() => {
+    const fn = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setShowSearch(s => !s); }
+      if (e.key === "Escape") { setShowSearch(false); setSearchQuery(""); setSearchResults([]); }
+    };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
   }, []);
 
   /* subscribe handler */
@@ -860,10 +1072,10 @@ export default function App() {
             {allGenres.map(g => <button key={g} className={`pill${genre === g ? " active" : ""}`} onClick={() => setGenre(g)} style={{ fontSize: 12, padding: "5px 12px" }}>{g}</button>)}
           </div>
           <div style={{ flex: 1 }} />
-          <div style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 6, padding: "8px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={() => setShowSearch(true)} style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.09)", borderRadius: 6, padding: "8px 14px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
             <span style={{ color: "#555", fontSize: 14 }}>🔍</span>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." style={{ background: "none", border: "none", outline: "none", color: "#fff", fontSize: 13, fontFamily: "'DM Sans', sans-serif", width: 150 }} />
-          </div>
+            <span style={{ color: "#444", fontSize: 13, fontFamily: "'DM Sans',sans-serif" }}>Buscar... <span style={{ fontSize: 11, color: "#333" }}>⌘K</span></span>
+          </button>
           <button className={subscribed ? "btn-ghost" : "btn-primary"} style={{ padding: "8px 18px", fontSize: 13 }} onClick={() => subscribed ? null : setShowSubForm(true)}>
             {subscribed ? "✓ Assinante" : `Assinar R$ ${price.toFixed(2).replace(".", ",")}`}
           </button>
@@ -897,8 +1109,8 @@ export default function App() {
                     </div>
                   )}
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    <button className="btn-primary" style={{ fontSize: 15, padding: "13px 26px" }} onClick={() => setSelBook(heroBook)}>📖 Ver Formatos</button>
-                    <button className="btn-ghost"   style={{ fontSize: 15, padding: "13px 20px" }} onClick={() => setSelBook(heroBook)}>ⓘ Detalhes</button>
+                    <button className="btn-primary" style={{ fontSize: 15, padding: "13px 26px" }} onClick={() => openBook(heroBook)}>📖 Ver Formatos</button>
+                    <button className="btn-ghost"   style={{ fontSize: 15, padding: "13px 20px" }} onClick={() => openBook(heroBook)}>ⓘ Detalhes</button>
                     {navigator.share && <button className="share-btn" onClick={() => shareBook(heroBook, "link", window.location.href + "#" + heroBook.id)}>↗ Compartilhar</button>}
                   </div>
                 </div>
@@ -962,21 +1174,70 @@ export default function App() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(172px,1fr))", gap: 14 }}>
                     {booksLoading
                       ? Array(4).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 260, borderRadius: 6 }} />)
-                      : featured.map(b => <BookCard key={b.id} book={b} w="100%" h={260} onClick={setSelBook} />)
+                      : featured.map(b => <BookCard key={b.id} book={b} w="100%" h={260} onClick={openBook} />)
                     }
                   </div>
                 </div>
               )}
-              {(newBooks.length > 0 || booksLoading) && <Row title="🔥 Novidades" books={newBooks} onBook={setSelBook} loading={booksLoading} />}
-              <Row title={genre === "Todos" ? "📚 Toda a Biblioteca" : `📖 ${genre}`} books={filtered} onBook={setSelBook} loading={booksLoading} />
+              {(newBooks.length > 0 || booksLoading) && <Row title="🔥 Novidades" books={newBooks} onBook={openBook} loading={booksLoading} />}
+              <Row title={genre === "Todos" ? "📚 Toda a Biblioteca" : `📖 ${genre}`} books={filtered} onBook={openBook} loading={booksLoading} />
               {genre === "Todos" && allGenres.filter(g => g !== "Todos").map(g => {
                 const gb = books.filter(b => b.genre === g);
                 if (!booksLoading && gb.length === 0) return null;
-                return <Row key={g} title={g} books={gb} onBook={setSelBook} loading={booksLoading} />;
+                return <Row key={g} title={g} books={gb} onBook={openBook} loading={booksLoading} />;
               })}
             </>
           )}
         </div>
+
+        {/* ── Search Overlay ── */}
+        {showSearch && (
+          <div className="search-overlay" onClick={() => { setShowSearch(false); setSearchQuery(""); setSearchResults([]); }}>
+            <div onClick={e => e.stopPropagation()} style={{ maxWidth: 700, margin: "0 auto", width: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,.06)", border: "1px solid rgba(200,135,58,.3)", borderRadius: 12, padding: "14px 18px", marginBottom: 24 }}>
+                <span style={{ fontSize: 20 }}>🔍</span>
+                <input autoFocus value={searchQuery} onChange={e => handleSearch(e.target.value)}
+                  placeholder="Buscar livros, autores, gêneros..."
+                  style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#fff", fontSize: 18, fontFamily: "'DM Sans',sans-serif" }} />
+                {searchQuery && <button onClick={() => { setSearchQuery(""); setSearchResults([]); }} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 18 }}>✕</button>}
+              </div>
+              {searchQuery && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {searchResults.length === 0
+                    ? <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#444", textAlign: "center", padding: "40px 0" }}>Nenhum resultado para "{searchQuery}"</div>
+                    : <>
+                        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#555", marginBottom: 4 }}>{searchResults.length} resultado{searchResults.length !== 1 ? "s" : ""}</div>
+                        {searchResults.map(book => (
+                          <div key={book.id} className="search-result-card" onClick={() => openBook(book)}>
+                            <img src={book.cover_url || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400&q=80"} alt={book.title}
+                              style={{ width: 50, height: 70, objectFit: "cover", borderRadius: 5, flexShrink: 0 }}
+                              onError={e => { e.target.src = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400&q=80"; }} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: "#fff", fontWeight: 700 }}>{book.title}</div>
+                              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#888", marginTop: 2 }}>{book.author}</div>
+                              <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                                <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#c8873a", background: "rgba(200,135,58,.1)", border: "1px solid rgba(200,135,58,.2)", padding: "2px 8px", borderRadius: 4 }}>{book.genre}</span>
+                                {book.is_new && <span className="badge badge-red" style={{ fontSize: 9 }}>NOVO</span>}
+                                {book.featured && <span className="badge badge-amber" style={{ fontSize: 9 }}>DESTAQUE</span>}
+                              </div>
+                            </div>
+                            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#444" }}>
+                              {Object.values(book.formats || {}).filter(Boolean).length} formato{Object.values(book.formats || {}).filter(Boolean).length !== 1 ? "s" : ""}
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                  }
+                </div>
+              )}
+              {!searchQuery && (
+                <div style={{ fontFamily: "'DM Sans',sans-serif", color: "#333", textAlign: "center", padding: "40px 0", fontSize: 14 }}>
+                  Digite para buscar na biblioteca · <span style={{ color: "#222" }}>ESC para fechar</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="footer-wrap" style={{ borderTop: "1px solid rgba(255,255,255,.04)", padding: "22px 56px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
