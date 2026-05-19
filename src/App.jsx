@@ -219,16 +219,16 @@ function BookModal({ book, onClose }) {
             {book.is_new   && <span className="badge badge-red">NOVO</span>}
           </div>
         </div>
-        <div style={{ padding: "0 28px 28px" }}>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, color: "#fff", marginBottom: 4, lineHeight: 1.2 }}>{book.title}</h2>
+        <div style={{ padding: "0 22px 22px", overflowY: "auto", flex: 1 }}>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(18px,5vw,26px)", color: "#fff", marginBottom: 4, lineHeight: 1.2 }}>{book.title}</h2>
           <div style={{ fontFamily: "'DM Sans', sans-serif", color: "#888", fontSize: 14, marginBottom: 14 }}>
             {book.author} · <span style={{ color: "#c8873a" }}>{book.genre}</span>
           </div>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#bbb", fontSize: 15, lineHeight: 1.75, marginBottom: 22 }}>{book.description}</p>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#bbb", fontSize: "clamp(13px,3.5vw,15px)", lineHeight: 1.7, marginBottom: 16 }}>{truncate(book.description, 220)}</p>
           {fmts.length > 0 ? (
             <>
               <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#444", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Formatos disponíveis</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
                 {fmts.map(([fmt, link]) => {
                   const m = FORMAT_META[fmt];
                   return (
