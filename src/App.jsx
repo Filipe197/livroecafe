@@ -992,7 +992,22 @@ export default function App() {
     setSubSaving(true);
     const { error } = await supabase.from("subscribers").upsert([{ email: subEmail.trim().toLowerCase(), name: subName.trim(), status: "active" }], { onConflict: "email" });
     if (error) { showToast("Erro ao registrar: " + error.message, "error"); }
-    else { showToast("🎉 Assinatura registrada com sucesso!", "success"); setSub(true); setShowSubForm(false); }
+    else {
+      showToast("🎉 Assinatura registrada com sucesso!", "success");
+      setSub(true);
+      setShowSubForm(false);
+      // Send welcome email via Supabase Edge Function
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/welcome-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+          },
+          body: JSON.stringify({ email: subEmail.trim().toLowerCase(), name: subName.trim() }),
+        });
+      } catch(e) { console.log("Email error:", e); }
+    }
     setSubSaving(false);
   };
 
