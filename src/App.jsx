@@ -378,7 +378,13 @@ function BookCard({ book, w = 150, h = 220, onClick }) {
       <div className="c-overlay">
         <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
           {book.is_new && <span className="badge badge-red">NOVO</span>}
-          {fmtCount > 0 && <span className="badge badge-green">{fmtCount} fmt</span>}
+          {fmtCount > 0 && (
+            <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+              {Object.entries(book.formats || {}).filter(([,v]) => v).map(([fmt]) => (
+                <span key={fmt} style={{ fontSize: 11 }}>{FORMAT_META[fmt]?.icon}</span>
+              ))}
+            </div>
+          )}
         </div>
         <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, color: "#fff", lineHeight: 1.3 }}>{book.title}</div>
         <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#aaa", marginTop: 2 }}>{book.author}</div>
