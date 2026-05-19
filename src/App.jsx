@@ -7,8 +7,8 @@ const SUPABASE_KEY = "sb_publishable_cPsjiFM_Q61ETYYdJuGVfQ_mBNFl4Tk";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ─── Admin credentials (em produção, use Supabase Auth) ─────────────────── */
-const ADMIN_USER = "admin";
-const ADMIN_PASS = "livroecafe2026";
+const ADMIN_USER = "lipesantos";
+const ADMIN_PASS = "Ee@86121625";
 
 /* ─── Constants ───────────────────────────────────────────────────────────── */
 const FORMAT_META = {
