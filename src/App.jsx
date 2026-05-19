@@ -469,7 +469,7 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,.06)", background: "#141210", overflowX: "auto", gap: 0 }}>
+        <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,.06)", background: "#141210", overflowX: "auto", gap: 0, scrollbarWidth: "none" }}>
           {[
             ["library", "📚", "Biblioteca", books.length],
             ["add", "＋", "Adicionar", null],
@@ -480,10 +480,10 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
           ].map(([id, icon, label, count]) => (
             <button key={id} className={`admin-tab${tab === id ? " active" : ""}`}
               onClick={() => { setTab(id); if (id === "subscribers") fetchSubs(); }}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "10px 16px", minWidth: 64 }}>
-              <span style={{ fontSize: 16 }}>{icon}</span>
-              <span style={{ fontSize: 11, whiteSpace: "nowrap" }}>{label}</span>
-              {count !== null && <span style={{ background: "rgba(200,135,58,.2)", color: "#c8873a", fontSize: 9, padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>{count}</span>}
+              style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 6, padding: "12px 18px", whiteSpace: "nowrap", flexShrink: 0 }}>
+              <span style={{ fontSize: 15 }}>{icon}</span>
+              <span style={{ fontSize: 13 }}>{label}</span>
+              {count !== null && <span style={{ background: "rgba(200,135,58,.2)", color: "#c8873a", fontSize: 10, padding: "1px 6px", borderRadius: 8, fontWeight: 700 }}>{count}</span>}
             </button>
           ))}
         </div>
