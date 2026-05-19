@@ -569,9 +569,11 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
   };
 
   const handleSavePrice = async () => {
+    const { error } = await supabase.from("settings")
+      .upsert({ key: "subscription_price", value: draftPrice.toString(), updated_at: new Date().toISOString() });
+    if (error) { showToast("Erro ao salvar preço: " + error.message, "error"); return; }
     setPrice(draftPrice);
-    localStorage.setItem("lc_price", draftPrice.toString());
-    showToast("✓ Preço atualizado!", "success");
+    showToast("✓ Preço atualizado para todos os usuários!", "success");
   };
 
   return (
@@ -934,7 +936,7 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
 export default function App() {
   const [books, setBooks]         = useState([]);
   const [booksLoading, setBooksLoading] = useState(true);
-  const [price, setPrice]         = useState(() => parseFloat(localStorage.getItem("lc_price") || "29.90"));
+  const [price, setPrice]         = useState(29.90);
   const [genre, setGenre]         = useState("Todos");
   const [search, setSearch]       = useState("");
   const [heroIdx, setHeroIdx]     = useState(0);
@@ -970,6 +972,12 @@ export default function App() {
     if (showSearch) setShowSearch(false);
   };
 
+  /* fetch price from Supabase */
+  const fetchPrice = useCallback(async () => {
+    const { data } = await supabase.from("settings").select("value").eq("key", "subscription_price").single();
+    if (data) setPrice(parseFloat(data.value));
+  }, []);
+
   /* fetch books from Supabase */
   const fetchBooks = useCallback(async () => {
     setBooksLoading(true);
@@ -979,7 +987,7 @@ export default function App() {
     setBooksLoading(false);
   }, []);
 
-  useEffect(() => { fetchBooks(); }, []);
+  useEffect(() => { fetchBooks(); fetchPrice(); }, []);
 
   /* hero rotation */
   useEffect(() => {
