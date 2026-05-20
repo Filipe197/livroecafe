@@ -21,11 +21,13 @@ const truncate = (str, n) => str && str.length > n ? str.slice(0, n).trimEnd() +
 const EMPTY_FORM = { title:"", author:"", genre:"", cover_url:"", description:"", featured:false, is_new:true, formats:{ ...EMPTY_FORMATS } };
 
 /* ── Google Books Search ── */
+const GOOGLE_BOOKS_KEY = "AIzaSyA1v8PRGiiVDp6lN8NGeu3Wc_DNWN5w7ns";
+
 async function searchGoogleBooks(query) {
   if (!query || query.length < 2) return [];
   try {
     const res = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&langRestrict=pt&maxResults=6&printType=books`
+      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&langRestrict=pt&maxResults=6&printType=books&key=${GOOGLE_BOOKS_KEY}`
     );
     const data = await res.json();
     return (data.items || []).map(item => {
