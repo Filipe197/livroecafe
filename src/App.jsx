@@ -776,7 +776,7 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} className="admin-modal" style={{ background: "#0e0c0a", width: "min(1000px,97vw)", margin: "auto", borderRadius: 14, border: "1px solid rgba(200,135,58,.15)", display: "flex", flexDirection: "column", maxHeight: "93vh", overflow: "hidden", boxShadow: "0 40px 100px rgba(0,0,0,.95)" }}>
+      <div onClick={e => e.stopPropagation()} className="admin-modal" style={{ background: "#0e0c0a", width: "min(1000px,97vw)", margin: "auto", borderRadius: 14, border: "1px solid rgba(200,135,58,.15)", display: "flex", flexDirection: "column", maxHeight: "93vh", overflow: "hidden", height: "93vh", boxShadow: "0 40px 100px rgba(0,0,0,.95)" }}>
 
         {/* Header */}
         <div style={{ background: "#181410", padding: "16px 24px", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid rgba(255,255,255,.06)" }}>
@@ -803,7 +803,7 @@ function AdminPanel({ onClose, showToast, price, setPrice }) {
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflow: "auto", padding: 24 }}>
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: 24, minHeight: 0 }}>
 
           {/* DASHBOARD */}
           {tab === "dashboard" && (() => {
