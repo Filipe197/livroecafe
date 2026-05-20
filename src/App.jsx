@@ -448,8 +448,61 @@ const FORMAT_EXTENSIONS = {
   mp3: ".mp3",
 };
 
+function SupabasePicker({ onSelect, onClose }) {
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    supabase.storage.from("epubs").list("", { limit: 200, sortBy: { column: "name", order: "asc" } })
+      .then(({ data }) => { setFiles(data || []); setLoading(false); });
+  }, []);
+
+  const filtered = files.filter(f => f.name.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#141210", borderRadius: 12, width: "min(560px,94vw)", maxHeight: "80vh", display: "flex", flexDirection: "column", border: "1px solid rgba(200,135,58,.2)", boxShadow: "0 40px 100px rgba(0,0,0,.9)", zIndex: 600 }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,.06)", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ fontFamily: "'DM Sans',sans-serif", fontWeight: 600, color: "#fff", fontSize: 15, flex: 1 }}>📂 Arquivos no Supabase Storage</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 20 }}>✕</button>
+        </div>
+        <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar arquivo..." className="input" style={{ padding: "8px 12px", fontSize: 13 }} autoFocus />
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+          {loading
+            ? <div style={{ padding: 32, textAlign: "center" }}><div className="spinner" style={{ margin: "0 auto" }} /></div>
+            : filtered.length === 0
+              ? <div style={{ padding: 32, textAlign: "center", color: "#444", fontFamily: "'DM Sans',sans-serif", fontSize: 13 }}>Nenhum arquivo encontrado</div>
+              : filtered.map(file => {
+                  const { data } = supabase.storage.from("epubs").getPublicUrl(file.name);
+                  return (
+                    <div key={file.name} onClick={() => { onSelect(data.publicUrl); onClose(); }}
+                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 20px", cursor: "pointer", transition: "background .15s", borderBottom: "1px solid rgba(255,255,255,.03)" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "rgba(200,135,58,.08)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                      <span style={{ fontSize: 20 }}>📄</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</div>
+                      </div>
+                      <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#c8873a", flexShrink: 0 }}>✓ Selecionar</span>
+                    </div>
+                  );
+                })
+          }
+        </div>
+        <div style={{ padding: "12px 20px", borderTop: "1px solid rgba(255,255,255,.06)", fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#444" }}>
+          {filtered.length} arquivo{filtered.length !== 1 ? "s" : ""} no bucket "epubs"
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FormatInputs({ formats, setFormats }) {
   const [uploading, setUploading] = useState({});
+  const [picker, setPicker] = useState(null);
 
   const handleUpload = async (key, file) => {
     if (!file) return;
@@ -471,6 +524,8 @@ function FormatInputs({ formats, setFormats }) {
   };
 
   return (
+    <>
+    {picker && <SupabasePicker onSelect={url => setFormats({ ...formats, [picker]: url })} onClose={() => setPicker(null)} />}
     <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 10, padding: 18 }}>
       <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
         Links de Download — Cole um link ou faça upload direto para o Supabase
@@ -497,6 +552,14 @@ function FormatInputs({ formats, setFormats }) {
                 <input type="file" accept={FORMAT_EXTENSIONS[key]} style={{ display: "none" }}
                   onChange={e => handleUpload(key, e.target.files[0])} disabled={uploading[key]} />
               </label>
+              <button type="button" onClick={() => setPicker(key)} style={{
+                background: "rgba(82,135,224,.15)", border: "1px solid rgba(82,135,224,.3)",
+                borderRadius: 6, padding: "0 10px", cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+                fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#5287e0", flexShrink: 0, height: "100%"
+              }}>
+                📂 Supabase
+              </button>
             </div>
             {formats[key] && formats[key].includes('supabase') && (
               <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#4dcc88", marginTop: 4 }}>
@@ -512,6 +575,7 @@ function FormatInputs({ formats, setFormats }) {
         ))}
       </div>
     </div>
+    </>
   );
 }
 
