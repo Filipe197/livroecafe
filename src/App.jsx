@@ -440,10 +440,41 @@ function Row({ title, books, onBook, loading }) {
   );
 }
 
+const FORMAT_EXTENSIONS = {
+  pdf: ".pdf",
+  epub: ".epub",
+  mobi: ".mobi",
+  txt: ".txt",
+  mp3: ".mp3",
+};
+
 function FormatInputs({ formats, setFormats }) {
+  const [uploading, setUploading] = useState({});
+
+  const handleUpload = async (key, file) => {
+    if (!file) return;
+    setUploading(u => ({ ...u, [key]: true }));
+    try {
+      const ext = file.name.split('.').pop();
+      const filename = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, '_')}`;
+      const { data, error } = await supabase.storage
+        .from('epubs')
+        .upload(filename, file, { cacheControl: '3600', upsert: false });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('epubs').getPublicUrl(filename);
+      setFormats({ ...formats, [key]: urlData.publicUrl });
+    } catch (err) {
+      alert('Erro ao fazer upload: ' + err.message);
+    } finally {
+      setUploading(u => ({ ...u, [key]: false }));
+    }
+  };
+
   return (
     <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 10, padding: 18 }}>
-      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Links de Download (Google Drive ou Supabase)</div>
+      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
+        Links de Download — Cole um link ou faça upload direto para o Supabase
+      </div>
       <div className="format-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {Object.entries(FORMAT_META).map(([key, meta]) => (
           <div key={key}>
@@ -452,7 +483,31 @@ function FormatInputs({ formats, setFormats }) {
               <span style={{ color: meta.color }}>{meta.label}</span>
               <span style={{ color: "#333", fontSize: 10 }}>(opcional)</span>
             </label>
-            <input className="input" value={formats[key] || ""} onChange={e => setFormats({ ...formats, [key]: e.target.value })} placeholder={`Link para ${meta.label}...`} style={{ fontSize: 12, padding: "9px 12px" }} />
+            <div style={{ display: "flex", gap: 6 }}>
+              <input className="input" value={formats[key] || ""} onChange={e => setFormats({ ...formats, [key]: e.target.value })}
+                placeholder={`Link ou faça upload →`} style={{ fontSize: 12, padding: "9px 12px", flex: 1 }} />
+              <label style={{
+                background: uploading[key] ? "#333" : "rgba(200,135,58,.15)",
+                border: "1px solid rgba(200,135,58,.3)",
+                borderRadius: 6, padding: "0 10px", cursor: uploading[key] ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+                fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: "#c8873a", flexShrink: 0
+              }}>
+                {uploading[key] ? <><div className="spinner" style={{ width: 12, height: 12 }} /> Enviando...</> : "⬆ Upload"}
+                <input type="file" accept={FORMAT_EXTENSIONS[key]} style={{ display: "none" }}
+                  onChange={e => handleUpload(key, e.target.files[0])} disabled={uploading[key]} />
+              </label>
+            </div>
+            {formats[key] && formats[key].includes('supabase') && (
+              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#4dcc88", marginTop: 4 }}>
+                ⚡ Supabase Storage
+              </div>
+            )}
+            {formats[key] && formats[key].includes('drive.google') && (
+              <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, color: "#5287e0", marginTop: 4 }}>
+                ☁️ Google Drive
+              </div>
+            )}
           </div>
         ))}
       </div>
