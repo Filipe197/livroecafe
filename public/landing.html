@@ -281,14 +281,36 @@
     <a href="https://livroecafe-app.vercel.app" class="btn-secondary" target="_blank">Ver o app →</a>
   </div>
 
-  <div class="books-preview animate delay-4">
-    <div class="book-cover"><img src="https://books.google.com/books/content?id=empregada&printsec=frontcover&img=1&zoom=2&source=gbs_api" onerror="this.src='https://placehold.co/90x130/1a1815/e8c97a?text=📖'" alt="Livro" /></div>
-    <div class="book-cover"><img src="https://m.media-amazon.com/images/I/81YkqyaFVEL._AC_UF1000,1000_QL80_.jpg" onerror="this.src='https://placehold.co/90x130/1a1815/e8c97a?text=📖'" alt="Livro" /></div>
-    <div class="book-cover"><img src="https://placehold.co/90x130/1e1c18/e8c97a?text=1984" alt="1984" /></div>
-    <div class="book-cover"><img src="https://placehold.co/90x130/18181e/c8c8e0?text=📚" alt="Livro" /></div>
-    <div class="book-cover"><img src="https://placehold.co/90x130/1a180e/e8c97a?text=📖" alt="Livro" /></div>
-    <div class="book-cover"><img src="https://placehold.co/90x130/0e1a12/7ec87e?text=📗" alt="Livro" /></div>
+  <div class="books-preview animate delay-4" id="books-preview">
+    <!-- Capas carregadas dinamicamente -->
   </div>
+  <script>
+    // Busca capas reais do Supabase
+    const SUPABASE_URL = 'https://yzwbwbrbogxblgpomlpj.supabase.co'
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6d2J3YnJib2d4YmxncG9tbHBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxOTE5NzIsImV4cCI6MjA5NDc2Nzk3Mn0.1geyi1DAMc_B8IX5VsgN2ZyORHthRUifcCRT2fNFN_g'
+    
+    fetch(`${SUPABASE_URL}/rest/v1/books?select=title,cover_url&featured=eq.true&limit=6`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    })
+    .then(r => r.json())
+    .then(books => {
+      const container = document.getElementById('books-preview')
+      if (!books || books.length === 0) return
+      container.innerHTML = books.map((b, i) => `
+        <div class="book-cover">
+          <img src="${b.cover_url}" alt="${b.title}" 
+               onerror="this.src='https://placehold.co/90x130/1a1815/e8c97a?text=📖'" />
+        </div>
+      `).join('')
+    })
+    .catch(() => {
+      document.getElementById('books-preview').innerHTML = `
+        <div class="book-cover"><img src="https://placehold.co/90x130/1e1c18/e8c97a?text=📖" alt="Livro" /></div>
+        <div class="book-cover"><img src="https://placehold.co/90x130/1a1815/c8c8e0?text=📚" alt="Livro" /></div>
+        <div class="book-cover"><img src="https://placehold.co/90x130/18180e/e8c97a?text=📗" alt="Livro" /></div>
+      `
+    })
+  </script>
 </section>
 
 <!-- STATS -->
